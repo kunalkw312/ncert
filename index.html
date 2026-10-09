@@ -78,7 +78,7 @@
             <div class="stats-bar">
                 <span id="resultCount">0 books</span>
                 <span class="stats-badge">Official NCERT</span>
-                <span class="stats-badge">Flipbook first</span>
+                <span class="stats-badge">Online Viewer</span>
                 <span class="stats-badge">PDF fallback</span>
             </div>
             <div class="book-grid" id="bookGrid"></div>
@@ -99,7 +99,7 @@
         <div class="modal-header">
             <div class="modal-title" id="modalTitle">Book Title</div>
             <div class="modal-controls">
-                <button class="action-btn btn-primary" id="toggleFormatBtn" onclick="toggleFormat()">Switch to PDF Format</button>
+                <button class="action-btn btn-primary" id="toggleFormatBtn" onclick="toggleFormat()">Try Original Flipbook (May be blocked)</button>
                 <button class="close-btn" onclick="closeReader()">&times;</button>
             </div>
         </div>
@@ -111,15 +111,13 @@
         let filteredBooks = [];
         let templates = { flipbook: '', pdf: '' };
         let selectedBook = null;
-        let currentModalFormat = 'flipbook';
+        let currentModalFormat = 'pdf'; // Default to PDF since flipbook is blocked
 
-        // Extract language from parenthesis in titles (e.g., "Maths (Hindi)" -> "Hindi")
         function extractLanguage(title) {
             const match = title.match(/\((.*?)\)/);
             return match ? match[1] : "English";
         }
 
-        // Initialize App
         fetch('ncert_digital_books_fallback.json')
             .then(response => response.json())
             .then(data => {
@@ -135,7 +133,8 @@
                 populateDropdowns();
                 renderGrid();
                 setupEventListeners();
-            });
+            })
+            .catch(error => console.error('Error loading the catalog:', error));
 
         function populateDropdowns() {
             const populate = (id, key) => {
@@ -169,6 +168,13 @@
             renderGrid();
         }
 
+        // Function to generate the cover URL. 
+        // If you upload actual images to GitHub later, change this to point to your image folder.
+        function getCoverUrl(bookCode, title) {
+            // Example for local images: return `images/${bookCode}.jpg`;
+            return `https://placehold.co/220x300/e8f0fe/1a73e8?text=${encodeURIComponent(title.substring(0, 15))}`;
+        }
+
         function renderGrid() {
             const grid = document.getElementById('bookGrid');
             document.getElementById('resultCount').textContent = `${filteredBooks.length} books`;
@@ -178,11 +184,9 @@
                 const isSelected = selectedBook && selectedBook.bookCode === book.bookCode;
                 const card = document.createElement('div');
                 card.className = `book-card ${isSelected ? 'selected' : ''}`;
-                // Fallback generated cover image since JSON doesn't provide them
-                const coverUrl = `https://placehold.co/220x300/e8f0fe/1a73e8?text=${encodeURIComponent(book.title.substring(0, 15))}`;
                 
                 card.innerHTML = `
-                    <img src="${coverUrl}" class="book-cover" alt="Cover">
+                    <img src="${getCoverUrl(book.bookCode, book.title)}" class="book-cover" alt="Cover">
                     <div class="book-title">${book.title}</div>
                     <div class="book-meta">${book.classLabel} - ${book.subject}</div>
                 `;
@@ -194,30 +198,27 @@
 
         function selectBook(book) {
             selectedBook = book;
-            renderGrid(); // Update selection styling
+            renderGrid(); 
             
             document.getElementById('previewPlaceholder').style.display = 'none';
             const dataPanel = document.getElementById('previewData');
             dataPanel.style.display = 'flex';
-            
-            const coverUrl = `https://placehold.co/320x440/e8f0fe/1a73e8?text=${encodeURIComponent(book.title.substring(0, 15))}`;
 
             dataPanel.innerHTML = `
-                <img src="${coverUrl}" class="preview-cover" alt="Cover">
+                <img src="${getCoverUrl(book.bookCode, book.title)}" class="preview-cover" alt="Cover">
                 <div class="preview-title">${book.title}</div>
                 <div class="preview-meta">${book.classLabel} - ${book.subject}</div>
                 <div class="badges">
                     <span class="badge blue">${book.bookCode.toUpperCase()}</span>
-                    <span class="badge">Flipbook</span>
-                    <span class="badge">PDF</span>
+                    <span class="badge">PDF Viewer</span>
                     <span class="badge">${book.language}</span>
                 </div>
-                <button class="action-btn btn-primary read-btn" onclick="openReader('flipbook')">
-                    Open Interactive Flipbook
+                <button class="action-btn btn-primary read-btn" onclick="openReader('pdf')">
+                    Open Book (Online Viewer)
                 </button>
-                <button class="action-btn secondary read-btn" onclick="openReader('pdf')">
-                    Open PDF Version
-                </button>
+                <a href="${templates.pdf.replace('{{bookCode}}', book.bookCode)}" target="_blank" class="action-btn secondary read-btn" style="text-decoration: none;">
+                    Download PDF
+                </a>
             `;
         }
 
@@ -230,23 +231,30 @@
         }
 
         function toggleFormat() {
+            // ePathshala flipbooks block iframes, so we will keep users on the PDF viewer by default
             currentModalFormat = currentModalFormat === 'flipbook' ? 'pdf' : 'flipbook';
             updateIframe();
         }
 
         function updateIframe() {
             const btn = document.getElementById('toggleFormatBtn');
-            const url = currentModalFormat === 'flipbook' 
-                ? templates.flipbook.replace('{{bookCode}}', selectedBook.bookCode)
-                : templates.pdf.replace('{{bookCode}}', selectedBook.bookCode);
+            const rawPdfUrl = templates.pdf.replace('{{bookCode}}', selectedBook.bookCode);
             
-            document.getElementById('readerFrame').src = url;
-            btn.textContent = currentModalFormat === 'flipbook' ? 'Switch to PDF Format' : 'Switch to Flipbook Format';
+            if (currentModalFormat === 'pdf') {
+                // Wraps the direct PDF link in Google's embedded viewer to bypass cross-origin blocks
+                const googleViewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(rawPdfUrl)}&embedded=true`;
+                document.getElementById('readerFrame').src = googleViewerUrl;
+                btn.textContent = 'Try Original Flipbook (May be blocked)';
+            } else {
+                // Direct epathshala link (often blocked by X-Frame-Options)
+                document.getElementById('readerFrame').src = templates.flipbook.replace('{{bookCode}}', selectedBook.bookCode);
+                btn.textContent = 'Switch to Stable PDF Viewer';
+            }
         }
 
         function closeReader() {
             document.getElementById('readerModal').classList.remove('active');
-            document.getElementById('readerFrame').src = ''; // Stop loading/audio in background
+            document.getElementById('readerFrame').src = ''; 
         }
 
         function setupEventListeners() {
