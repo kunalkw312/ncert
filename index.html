@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NCERT Book Catalog</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        li { margin-bottom: 8px; }
+    </style>
+</head>
+<body>
+    <h1>Available NCERT Books</h1>
+    
+    <!-- This list will be populated by JavaScript -->
+    <ul id="book-list"></ul>
+
+    <script>
+        // Fetch the JSON file (ensure the file is in the same directory as your HTML)
+        fetch('ncert_digital_books_fallback.json')
+            .then(response => response.json())
+            .then(data => {
+                const bookList = document.getElementById('book-list');
+                
+                // Extract the PDF template string from the JSON data
+                const pdfTemplate = data.pdfUrlTemplate; 
+
+                // Loop through each book item in the JSON
+                data.items.forEach(book => {
+                    // Inject the unique bookCode into the template to create a working URL
+                    const pdfLink = pdfTemplate.replace('{{bookCode}}', book.bookCode);
+
+                    // Create a list item and a clickable link for each book
+                    const listItem = document.createElement('li');
+                    listItem.innerHTML = `<a href="${pdfLink}" target="_blank">
+                        <strong>${book.title}</strong> (${book.classLabel} - ${book.subject})
+                    </a>`;
+                    
+                    bookList.appendChild(listItem);
+                });
+            })
+            .catch(error => console.error('Error loading the catalog:', error));
+    </script>
+</body>
+</html>
