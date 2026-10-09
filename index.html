@@ -3,43 +3,261 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NCERT Book Catalog</title>
+    <title>NCERT Digital Book Library</title>
     <style>
-        body { font-family: sans-serif; padding: 20px; }
-        li { margin-bottom: 8px; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        body { background-color: #f8f9fa; color: #202124; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        
+        /* Top Navigation & Filters */
+        header { background: #ffffff; padding: 16px 24px; border-bottom: 1px solid #dadce0; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+        .search-wrapper { display: flex; gap: 8px; flex: 1; min-width: 250px; }
+        input[type="text"], select { padding: 10px 14px; border: 1px solid #dadce0; border-radius: 8px; font-size: 14px; outline: none; background: #f8f9fa; }
+        input[type="text"]:focus, select:focus { border-color: #1a73e8; background: #fff; }
+        input[type="text"] { flex: 1; }
+        button.action-btn { padding: 10px 16px; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; transition: background 0.2s; }
+        .btn-primary { background: #1a73e8; color: white; }
+        .btn-primary:hover { background: #1557b0; }
+        
+        /* Main Layout */
+        .main-container { display: flex; flex: 1; overflow: hidden; }
+        .grid-section { flex: 1; padding: 24px; overflow-y: auto; }
+        .preview-section { width: 340px; background: #ffffff; border-left: 1px solid #dadce0; padding: 24px; display: flex; flex-direction: column; overflow-y: auto; }
+        
+        /* Book Grid */
+        .stats-bar { margin-bottom: 20px; font-size: 18px; font-weight: 600; display: flex; align-items: center; gap: 12px; }
+        .stats-badge { font-size: 12px; padding: 4px 8px; background: #e8f0fe; color: #1a73e8; border-radius: 4px; font-weight: 500; }
+        
+        .book-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; }
+        .book-card { background: #ffffff; border: 1px solid #dadce0; border-radius: 12px; padding: 16px; cursor: pointer; transition: all 0.2s ease; display: flex; flex-direction: column; align-items: center; text-align: center; position: relative; }
+        .book-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); transform: translateY(-2px); }
+        .book-card.selected { border: 2px solid #1a73e8; background: #f4f8ff; padding: 15px; }
+        .book-cover { width: 110px; height: 150px; object-fit: cover; border-radius: 4px; margin-bottom: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
+        .book-title { font-weight: 600; font-size: 14px; margin-bottom: 6px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .book-meta { font-size: 12px; color: #5f6368; }
+        
+        /* Preview Panel */
+        .preview-header { font-size: 12px; font-weight: bold; color: #5f6368; letter-spacing: 1px; margin-bottom: 20px; }
+        .preview-content { display: flex; flex-direction: column; align-items: center; text-align: center; }
+        .preview-cover { width: 160px; height: 220px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); border-radius: 6px; margin-bottom: 20px; }
+        .preview-title { font-size: 20px; font-weight: bold; margin-bottom: 8px; }
+        .preview-meta { font-size: 14px; color: #5f6368; margin-bottom: 24px; }
+        
+        .badges { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 30px; }
+        .badge { font-size: 12px; padding: 6px 12px; border-radius: 16px; background: #f1f3f4; color: #3c4043; font-weight: 500; }
+        .badge.blue { background: #e8f0fe; color: #1a73e8; }
+        
+        .read-btn { width: 100%; padding: 14px; margin-bottom: 12px; display: flex; justify-content: center; align-items: center; gap: 8px; }
+        .read-btn.secondary { background: #ffffff; color: #1a73e8; border: 1px solid #1a73e8; }
+        .read-btn.secondary:hover { background: #f4f8ff; }
+
+        /* Fullscreen Modal */
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; flex-direction: column; }
+        .modal.active { display: flex; }
+        .modal-header { display: flex; justify-content: space-between; padding: 16px 24px; background: #202124; color: white; align-items: center; }
+        .modal-title { font-weight: 600; font-size: 18px; }
+        .modal-controls { display: flex; gap: 16px; align-items: center; }
+        .close-btn { background: transparent; border: none; color: white; font-size: 28px; cursor: pointer; line-height: 1; }
+        .close-btn:hover { color: #ea4335; }
+        iframe { flex: 1; border: none; width: 100%; height: 100%; background: #ffffff; }
     </style>
 </head>
 <body>
-    <h1>Available NCERT Books</h1>
+    <header>
+        <div class="search-wrapper">
+            <input type="text" id="searchInput" placeholder="Search NCERT books...">
+            <button id="searchBtn" class="action-btn btn-primary">Search</button>
+        </div>
+        <select id="classFilter"><option value="">All classes</option></select>
+        <select id="subjectFilter"><option value="">All subjects</option></select>
+        <select id="titleFilter"><option value="">All titles</option></select>
+        <select id="languageFilter"><option value="">All languages</option></select>
+    </header>
     
-    <!-- This list will be populated by JavaScript -->
-    <ul id="book-list"></ul>
+    <div class="main-container">
+        <div class="grid-section">
+            <div class="stats-bar">
+                <span id="resultCount">0 books</span>
+                <span class="stats-badge">Official NCERT</span>
+                <span class="stats-badge">Flipbook first</span>
+                <span class="stats-badge">PDF fallback</span>
+            </div>
+            <div class="book-grid" id="bookGrid"></div>
+        </div>
+        
+        <div class="preview-section" id="previewPanel">
+            <div class="preview-header">PREVIEW</div>
+            <div id="previewPlaceholder" style="text-align: center; color: #80868b; margin-top: 40px;">
+                Select a book from the grid to view details.
+            </div>
+            <div id="previewData" class="preview-content" style="display: none;">
+                <!-- Dynamically populated -->
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="readerModal">
+        <div class="modal-header">
+            <div class="modal-title" id="modalTitle">Book Title</div>
+            <div class="modal-controls">
+                <button class="action-btn btn-primary" id="toggleFormatBtn" onclick="toggleFormat()">Switch to PDF Format</button>
+                <button class="close-btn" onclick="closeReader()">&times;</button>
+            </div>
+        </div>
+        <iframe id="readerFrame" src=""></iframe>
+    </div>
 
     <script>
-        // Fetch the JSON file (ensure the file is in the same directory as your HTML)
+        let allBooks = [];
+        let filteredBooks = [];
+        let templates = { flipbook: '', pdf: '' };
+        let selectedBook = null;
+        let currentModalFormat = 'flipbook';
+
+        // Extract language from parenthesis in titles (e.g., "Maths (Hindi)" -> "Hindi")
+        function extractLanguage(title) {
+            const match = title.match(/\((.*?)\)/);
+            return match ? match[1] : "English";
+        }
+
+        // Initialize App
         fetch('ncert_digital_books_fallback.json')
             .then(response => response.json())
             .then(data => {
-                const bookList = document.getElementById('book-list');
+                templates.flipbook = data.readerUrlTemplate;
+                templates.pdf = data.pdfUrlTemplate;
                 
-                // Extract the PDF template string from the JSON data
-                const pdfTemplate = data.pdfUrlTemplate; 
+                allBooks = data.items.map(book => ({
+                    ...book,
+                    language: extractLanguage(book.title)
+                }));
+                
+                filteredBooks = [...allBooks];
+                populateDropdowns();
+                renderGrid();
+                setupEventListeners();
+            });
 
-                // Loop through each book item in the JSON
-                data.items.forEach(book => {
-                    // Inject the unique bookCode into the template to create a working URL
-                    const pdfLink = pdfTemplate.replace('{{bookCode}}', book.bookCode);
-
-                    // Create a list item and a clickable link for each book
-                    const listItem = document.createElement('li');
-                    listItem.innerHTML = `<a href="${pdfLink}" target="_blank">
-                        <strong>${book.title}</strong> (${book.classLabel} - ${book.subject})
-                    </a>`;
-                    
-                    bookList.appendChild(listItem);
+        function populateDropdowns() {
+            const populate = (id, key) => {
+                const select = document.getElementById(id);
+                const uniqueValues = [...new Set(allBooks.map(b => b[key]))].sort();
+                uniqueValues.forEach(val => {
+                    if(val) select.add(new Option(val, val));
                 });
-            })
-            .catch(error => console.error('Error loading the catalog:', error));
+            };
+            populate('classFilter', 'classLabel');
+            populate('subjectFilter', 'subject');
+            populate('titleFilter', 'title');
+            populate('languageFilter', 'language');
+        }
+
+        function filterBooks() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const cls = document.getElementById('classFilter').value;
+            const sub = document.getElementById('subjectFilter').value;
+            const tit = document.getElementById('titleFilter').value;
+            const lang = document.getElementById('languageFilter').value;
+
+            filteredBooks = allBooks.filter(book => {
+                const matchesSearch = book.title.toLowerCase().includes(query) || book.bookCode.toLowerCase().includes(query);
+                const matchesClass = !cls || book.classLabel === cls;
+                const matchesSub = !sub || book.subject === sub;
+                const matchesTit = !tit || book.title === tit;
+                const matchesLang = !lang || book.language === lang;
+                return matchesSearch && matchesClass && matchesSub && matchesTit && matchesLang;
+            });
+            renderGrid();
+        }
+
+        function renderGrid() {
+            const grid = document.getElementById('bookGrid');
+            document.getElementById('resultCount').textContent = `${filteredBooks.length} books`;
+            grid.innerHTML = '';
+
+            filteredBooks.forEach(book => {
+                const isSelected = selectedBook && selectedBook.bookCode === book.bookCode;
+                const card = document.createElement('div');
+                card.className = `book-card ${isSelected ? 'selected' : ''}`;
+                // Fallback generated cover image since JSON doesn't provide them
+                const coverUrl = `https://placehold.co/220x300/e8f0fe/1a73e8?text=${encodeURIComponent(book.title.substring(0, 15))}`;
+                
+                card.innerHTML = `
+                    <img src="${coverUrl}" class="book-cover" alt="Cover">
+                    <div class="book-title">${book.title}</div>
+                    <div class="book-meta">${book.classLabel} - ${book.subject}</div>
+                `;
+                
+                card.onclick = () => selectBook(book);
+                grid.appendChild(card);
+            });
+        }
+
+        function selectBook(book) {
+            selectedBook = book;
+            renderGrid(); // Update selection styling
+            
+            document.getElementById('previewPlaceholder').style.display = 'none';
+            const dataPanel = document.getElementById('previewData');
+            dataPanel.style.display = 'flex';
+            
+            const coverUrl = `https://placehold.co/320x440/e8f0fe/1a73e8?text=${encodeURIComponent(book.title.substring(0, 15))}`;
+
+            dataPanel.innerHTML = `
+                <img src="${coverUrl}" class="preview-cover" alt="Cover">
+                <div class="preview-title">${book.title}</div>
+                <div class="preview-meta">${book.classLabel} - ${book.subject}</div>
+                <div class="badges">
+                    <span class="badge blue">${book.bookCode.toUpperCase()}</span>
+                    <span class="badge">Flipbook</span>
+                    <span class="badge">PDF</span>
+                    <span class="badge">${book.language}</span>
+                </div>
+                <button class="action-btn btn-primary read-btn" onclick="openReader('flipbook')">
+                    Open Interactive Flipbook
+                </button>
+                <button class="action-btn secondary read-btn" onclick="openReader('pdf')">
+                    Open PDF Version
+                </button>
+            `;
+        }
+
+        function openReader(format) {
+            if (!selectedBook) return;
+            currentModalFormat = format;
+            updateIframe();
+            document.getElementById('modalTitle').textContent = `${selectedBook.title} (${selectedBook.classLabel})`;
+            document.getElementById('readerModal').classList.add('active');
+        }
+
+        function toggleFormat() {
+            currentModalFormat = currentModalFormat === 'flipbook' ? 'pdf' : 'flipbook';
+            updateIframe();
+        }
+
+        function updateIframe() {
+            const btn = document.getElementById('toggleFormatBtn');
+            const url = currentModalFormat === 'flipbook' 
+                ? templates.flipbook.replace('{{bookCode}}', selectedBook.bookCode)
+                : templates.pdf.replace('{{bookCode}}', selectedBook.bookCode);
+            
+            document.getElementById('readerFrame').src = url;
+            btn.textContent = currentModalFormat === 'flipbook' ? 'Switch to PDF Format' : 'Switch to Flipbook Format';
+        }
+
+        function closeReader() {
+            document.getElementById('readerModal').classList.remove('active');
+            document.getElementById('readerFrame').src = ''; // Stop loading/audio in background
+        }
+
+        function setupEventListeners() {
+            document.getElementById('searchBtn').addEventListener('click', filterBooks);
+            document.getElementById('searchInput').addEventListener('keyup', (e) => {
+                if (e.key === 'Enter') filterBooks();
+            });
+            ['classFilter', 'subjectFilter', 'titleFilter', 'languageFilter'].forEach(id => {
+                document.getElementById(id).addEventListener('change', filterBooks);
+            });
+        }
     </script>
 </body>
 </html>
